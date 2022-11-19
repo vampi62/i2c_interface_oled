@@ -6,7 +6,10 @@
 #sudo pip install pi-ina219
 #sudo apt install mosquitto-clients
 
-
+# a faire
+# exec commande a l'ouverture d'une page
+# imprimer le retour commande d'un bouton --> page special
+# fichier separer --> config / fonction
 
 import smbus
 import time
@@ -20,6 +23,9 @@ from ina219 import INA219,DeviceRangeError
 #from multiprocessing import Process
 import pyudev
 
+## ------ config ------ ##
+from config_lcd import page,nav
+
 ## ------ init var ------ ##
 encoding = 'utf-8'
 RST = None
@@ -32,9 +38,11 @@ offset_y_display = [0,9,17,25]
 anti_act = 0
 veillescreen = 0
 veille_tempo = 2000
-printmeno = ['','','']
+printmeno = []
 tempo_actu_screen = 0
 custom_return = ''
+move = False
+nav_histo = []
 ## ------ init lib ------ ##
 
 disp = Adafruit_SSD1306.SSD1306_128_32(rst=RST)
@@ -49,52 +57,6 @@ height = disp.height
 image = Image.new('1', (width, height))
 draw = ImageDraw.Draw(image)
 font = ImageFont.load_default()
-
-## ------ config ------ ##
-# 0 = button, 1 = info, 2 = info+button
-# format : ['name',page si nav_ou_commande=false ,nav_ou_commande,['command','affichage si 0','affichage si 1',['func custom','option1','option2']],['command_button','option1 si info=1','option2 si info=0']]
-
-nav_histo = []
-p0 = []
-p1 = []
-p2 = []
-p3 = []
-p4 = []
-page = []
-
-p0.append(['energie',1,True,['','','',['','','']],['','','','']])
-p0.append(['gestion',2,True,['','','',['','','']],['','','','']])
-p0.append(['resource',3,True,['','','',['','','']],['','','','']])
-p0.append(['temperature',4,True,['','','',['','','']],['','','','']])
-
-p1.append(['prise_1 :',3,False,['mosquitto_sub -h 192.168.5.1 -t zigbee2mqtt/multi_labo -u zigbee -P jee4mqt2sub -C 1','OFF','ON',['mqtt','prise','state_l1']],['mosquitto_pub -h 192.168.5.1 -t zigbee2mqtt/multi_labo/set -u zigbee -P jee4mqt2sub -m ','"{ \\"state_l1\\": \\"OFF\\" }\"','\"{ \\"state_l1\\": \\"ON\\" }\"','']])
-p1.append(['prise_2 :',3,False,['mosquitto_sub -h 192.168.5.1 -t zigbee2mqtt/multi_labo -u zigbee -P jee4mqt2sub -C 1','OFF','ON',['mqtt','prise','state_l2']],['mosquitto_pub -h 192.168.5.1 -t zigbee2mqtt/multi_labo/set -u zigbee -P jee4mqt2sub -m ','"{ \\"state_l2\\": \\"OFF\\" }\"','\"{ \\"state_l2\\": \\"ON\\" }\"','']])
-p1.append(['prise_3 :',3,False,['mosquitto_sub -h 192.168.5.1 -t zigbee2mqtt/multi_labo -u zigbee -P jee4mqt2sub -C 1','OFF','ON',['mqtt','prise','state_l3']],['mosquitto_pub -h 192.168.5.1 -t zigbee2mqtt/multi_labo/set -u zigbee -P jee4mqt2sub -m ','"{ \\"state_l3\\": \\"OFF\\" }\"','\"{ \\"state_l3\\": \\"ON\\" }\"','']])
-p1.append(['prise_4 :',3,False,['mosquitto_sub -h 192.168.5.1 -t zigbee2mqtt/multi_labo -u zigbee -P jee4mqt2sub -C 1','OFF','ON',['mqtt','prise','state_l4']],['mosquitto_pub -h 192.168.5.1 -t zigbee2mqtt/multi_labo/set -u zigbee -P jee4mqt2sub -m ','"{ \\"state_l4\\": \\"OFF\\" }\"','\"{ \\"state_l4\\": \\"ON\\" }\"','']])
-p1.append(['usb     :',3,False,['mosquitto_sub -h 192.168.5.1 -t zigbee2mqtt/multi_labo -u zigbee -P jee4mqt2sub -C 1','OFF','ON',['mqtt','prise','state_l5']],['mosquitto_pub -h 192.168.5.1 -t zigbee2mqtt/multi_labo/set -u zigbee -P jee4mqt2sub -m ','"{ \\"state_l5\\": \\"OFF\\" }\"','\"{ \\"state_l5\\": \\"ON\\" }\"','']])
-
-p2.append(['wifi driver',1,False,['','','',['','','']],['python restoredrive.py','','','']])
-p2.append(['fsck sd',1,False,['','','',['','','']],['python repare.py','','','','']])
-p2.append(['ping gateway',1,False,['','','',['','','']],['python ping.py','','','']])
-p2.append(['redemarrage',1,False,['','','',['','','']],['python redemarrage.py','','','','']])
-p2.append(['arret',1,False,['','','',['','','']],['python arret.py','','','','']])
-
-p3.append(['IP   :',2,False,['hostname -I | cut -d\' \' -f1','','',['','','']],['','','','']])
-p3.append(['TEMP :',2,False,['vcgencmd measure_temp | cut -b 6-12','','',['','','']],['','','','']])
-p3.append(['CPU  :',2,False,["top -bn1 | grep load | awk '{printf \"%.2f%%\", $(NF-2)*10}'",'','',['','','']],['','','','']])
-p3.append(['RAM  :',2,False,["free -m | awk 'NR==2{printf \"%s/%sMB \", $3,$2 }'",'','',['','','']],['','','','']])
-p3.append(['DISK :',2,False,["df -h | grep 'root' | awk '{print $3 \"/\" $2 \" \" $5}'",'','',['','','']],['','','','']])
-
-p4.append(['TEMP :',2,False,['mosquitto_sub -h 192.168.5.1 -t zigbee2mqtt/temp_labo -u zigbee -P jee4mqt2sub -C 1','','',['mqtt','temp','temperature']],['','','','']])
-p4.append(['HUMI :',2,False,['mosquitto_sub -h 192.168.5.1 -t zigbee2mqtt/temp_labo -u zigbee -P jee4mqt2sub -C 1','','',['mqtt','humi','humidity']],['','','','']])
-
-page.append(p0)
-page.append(p1)
-page.append(p2)
-page.append(p3)
-page.append(p4)
-
-nav = ["menu","menu/energie","menu/gestion","menu/resource","menu/temperature"]
 
 ## ------ code custom ------ ##
 def custom_index(active,position):
@@ -134,6 +96,9 @@ def mqtt(mqtt_command,mqtt_type,mqtt_recherche):
 def pagechange(sens,active,position):
     if sens:
         if page[active][position][3]:
+            if page[active][position][4][0] or page[active][position][5][0]:
+                ## exec si code
+                ex = 0
             nav_histo.append([active,position])
             return page[active][position][1],0
         else:
@@ -153,6 +118,8 @@ def conversion_return(active,position,returncommand):
         return page[active][position][3][1]
     elif returncommand == "1":
         return page[active][position][3][2]
+    else:
+        return returncommand
 
 ## execution command des boutons
 def action(active,position,typeact):
@@ -188,30 +155,34 @@ def action(active,position,typeact):
                 returncommand = subprocess.check_output(page[active][position][4][0] + page[active][position][4][1], shell = True )
             elif returncommand == page[active][position][0] + page[active][position][3][1]:
                 returncommand = subprocess.check_output(page[active][position][4][0] + page[active][position][4][2], shell = True )
+            getcommand()
+            printpage()
            # return page[active][position][0] + str(returncommand)
 
 def printpage():
     draw.rectangle((0,0,width,height), outline=0, fill=0)
     if veillescreen < veille_tempo:
         draw.text((x_display, top_display + offset_y_display[0]),  str(" " + nav[pageactive]),  font=font, fill=255)
+        offset_select = get_offset(position_x)
         for x in range(0, 3):
-            draw.text((x_display, top_display + offset_y_display[x+1]),  printmeno[x],  font=font, fill=255)
+            if x+offset_select < len(page[pageactive]):
+                if x+offset_select == position_x:
+                    selection_x = "*"
+                else:
+                    selection_x = " "
+                draw.text((x_display, top_display + offset_y_display[x+1]),  selection_x + " " + printmeno[x+offset_select],  font=font, fill=255)
     disp.image(image)
     disp.display()
 
-def getcommand():
-    if position_x > 2:
-        offset_select = position_x-2
+def get_offset(x):
+    if x > 2:
+        return x-2
     else:
-        offset_select = 0
-    for x in range(0, 3):
-        printmeno[x] = ''
-        if x+offset_select < len(page[pageactive]):
-            if x+offset_select == position_x:
-                selection_x = "*"
-            else:
-                selection_x = " "
-            printmeno[x] = selection_x + " " + action(pageactive,offset_select+x,False)
+        return 0
+
+def getcommand():
+    for x in range(0, len(page[pageactive])):
+        printmeno[x] = action(pageactive,x,False)
 
 def read_pin_pcf():
     pins = b.read_byte(PCF8574)
@@ -222,7 +193,7 @@ def read_pin_pcf():
                 if position_x > 0:
                     position_x -= 1
             veillescreen = 0
-            tempo_actu_screen = 0
+            move = True
     else:
         if anti_act == 10:
             anti_act = 0
@@ -253,7 +224,7 @@ def read_pin_pcf():
                 if position_x < len(page[pageactive])-1:
                     position_x += 1
             veillescreen = 0
-            tempo_actu_screen = 0
+            move = True
     else:
         if anti_act == 13:
             anti_act = 0
@@ -274,6 +245,9 @@ def run():
         else:
             tempo_actu_screen +=1
             veillescreen += 1
+        if move:
+            printpage()
+            move = False
 
 if __name__ == '__main__':
     run()
