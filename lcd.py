@@ -6,11 +6,6 @@
 #sudo pip install pi-ina219
 #sudo apt install mosquitto-clients
 
-# a faire
-# exec commande a l'ouverture d'une page
-# imprimer le retour commande d'un bouton --> page special
-# fichier separer --> config / fonction
-
 import smbus
 import time
 import subprocess
@@ -19,12 +14,48 @@ import Adafruit_SSD1306
 from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageFont
-from ina219 import INA219,DeviceRangeError
+#from ina219 import INA219,DeviceRangeError
 #from multiprocessing import Process
-import pyudev
+#import pyudev
+
 
 ## ------ config ------ ##
 from config_lcd import page,nav
+
+## ------ custom ------ ##
+
+def custom_index(active,position):
+    if page[active][position][3][3][0] == 'mqtt':
+        return mqtt(page[active][position][3][0],page[active][position][3][3][1],page[active][position][3][3][2])
+
+def mqtt(mqtt_command,mqtt_type,mqtt_recherche):
+    returncommand = subprocess.check_output(mqtt_command, shell = True )
+    returncommand = returncommand.decode(encoding)
+    off = returncommand.find(mqtt_recherche)
+    if mqtt_type == "prise":
+        if returncommand[off+11] == "O" and returncommand[off+12] == "N":
+            return "1"
+        elif returncommand[off+11] == "O" and returncommand[off+12] == "F":
+            return "0"
+        else:
+            return "inconnue"
+    elif mqtt_type == "temp" or mqtt_type == "humi":
+        if mqtt_type == "temp":
+            off += 13
+        elif mqtt_type == "humi":
+            off += 10
+        temp = ""
+        for a in range(15):
+            if returncommand[off+a] == ",":
+                break
+            temp += returncommand[off+a]
+        if mqtt_type == "temp":
+            temp += "°C"
+        elif mqtt_type == "humi":
+            temp += " %"
+        return temp
+
+## -- ne rien changer apres cette ligne, l'ajout de fonction doit se faire dans la section au dessus et l'ajout de page ou d'action dans le fichier config_lcd.py -- ##
 
 ## ------ init var ------ ##
 encoding = 'utf-8'
@@ -58,47 +89,14 @@ image = Image.new('1', (width, height))
 draw = ImageDraw.Draw(image)
 font = ImageFont.load_default()
 
-## ------ code custom ------ ##
-def custom_index(active,position):
-    if page[active][position][3][3][0] == 'mqtt':
-        return mqtt(page[active][position][3][0],page[active][position][3][3][1],page[active][position][3][3][2])
-
-def mqtt(mqtt_command,mqtt_type,mqtt_recherche):
-    returncommand = subprocess.check_output(mqtt_command, shell = True )
-    returncommand = returncommand.decode(encoding)
-    off = returncommand.find(mqtt_recherche)
-    if mqtt_type == "prise":
-        if returncommand[off+11] == "O" and returncommand[off+12] == "N":
-            return "1"
-        elif returncommand[off+11] == "O" and returncommand[off+12] == "F":
-            return "0"
-        else:
-            return "inconnue"
-    elif mqtt_type == "temp" or mqtt_type == "humi":
-        if mqtt_type == "temp":
-            off += 13
-        elif mqtt_type == "humi":
-            off += 10
-        temp = ""
-        for a in range(15):
-            if returncommand[off+a] == ",":
-                break
-            temp += returncommand[off+a]
-        if mqtt_type == "temp":
-            temp += "°C"
-        elif mqtt_type == "humi":
-            temp += " %"
-        return temp
-
-## ------ code generic ------ ## -- ne rien changer --
+## ------ code generic ------ ## 
 
 ## gestion des pages
 def pagechange(sens,active,position):
     if sens:
-        if page[active][position][3]:
-            if page[active][position][4][0] or page[active][position][5][0]:
-                ## exec si code
-                ex = 0
+        if page[active][position][2]:
+            if page[active][position][4][0] != '':
+                action(active,position,True)
             nav_histo.append([active,position])
             return page[active][position][1],0
         else:
@@ -147,7 +145,7 @@ def action(active,position,typeact):
                 return page[active][position][0]
     else: ## buton
         if page[active][position][1] == 1:
-            returncommand = subprocess.check_output(page[active][position][3][0], shell = True )
+            returncommand = subprocess.check_output(page[active][position][4][0], shell = True )
            # return page[active][position][0] + str(returncommand)
         if page[active][position][1] == 3:
             returncommand = action(active,position,False)
@@ -160,6 +158,8 @@ def action(active,position,typeact):
            # return page[active][position][0] + str(returncommand)
 
 def printpage():
+    global veillescreen
+    global printmeno
     draw.rectangle((0,0,width,height), outline=0, fill=0)
     if veillescreen < veille_tempo:
         draw.text((x_display, top_display + offset_y_display[0]),  str(" " + nav[pageactive]),  font=font, fill=255)
@@ -181,10 +181,20 @@ def get_offset(x):
         return 0
 
 def getcommand():
+    global printmeno
+    printmeno = []
+    for x in range(0, len(page[pageactive])):
+        printmeno.append("")
     for x in range(0, len(page[pageactive])):
         printmeno[x] = action(pageactive,x,False)
 
 def read_pin_pcf():
+    global anti_act
+    global move
+    global veillescreen
+    global tempo_actu_screen
+    global position_x
+    global pageactive
     pins = b.read_byte(PCF8574)
     if (pins & 0x08) == 0: # haut
         if anti_act == 0:
@@ -234,6 +244,10 @@ def read_pin_pcf():
 #    if (pins & 0x40) == 0:
 #    if (pins & 0x80) == 0:
 def run():
+    global anti_act
+    global move
+    global veillescreen
+    global tempo_actu_screen
     while 1:
         read_pin_pcf()
         if tempo_actu_screen == 0:
