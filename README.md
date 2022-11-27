@@ -60,9 +60,11 @@ p..numero de page.append(['nom',bool false si navigation ,nav_ou_commande,['comm
 
 ## ressources
 
-PCB disponible : https://u.easyeda.com/vadidi62/pi_oled__display
+PCB : https://oshwlab.com/vadidi62/pi_oled__display
 
-STL disponible : https://www.thingiverse.com/thing:0/edit
+STL : https://www.thingiverse.com/thing:5661212
+
+STL compatible : https://www.thingiverse.com/thing:4249203
 
 script PYTHON : https://github.com/vampi62/i2c_interface_oled
 

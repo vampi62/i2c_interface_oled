@@ -112,12 +112,12 @@ def pagechange(sens,active,position):
 
 ## convertie la sortie binaire d'une commande en texte pret definie
 def conversion_return(active,position,returncommand):
-    if returncommand == "0":
-        return page[active][position][3][1]
-    elif returncommand == "1":
-        return page[active][position][3][2]
-    else:
-        return returncommand
+    if page[active][position][3][1] != '' and page[active][position][3][1] != '':
+        if returncommand == "0":
+            return page[active][position][3][1]
+        elif returncommand == "1":
+            return page[active][position][3][2]
+    return returncommand
 
 ## execution command des boutons
 def action(active,position,typeact):
