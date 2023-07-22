@@ -29,6 +29,4 @@ draw.text((x_display, top_display + offset_y_display[1]),  str("arret"),  font=f
 draw.text((x_display, top_display + offset_y_display[2]),  str("en cours"),  font=font, fill=255)
 disp.image(image)
 disp.display()
-bus = smbus.SMBus(DEVICE_BUS)
-bus.write_byte_data(DEVICE_ADDR, 24,30)
 returncommand = subprocess.check_output('sudo shutdown -h now', shell = True)
