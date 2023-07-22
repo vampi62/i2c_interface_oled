@@ -1,11 +1,12 @@
 # 1 = button, 2 = info, 3 = info+button
-# format : ['name',page si nav_ou_commande=false ,nav_ou_commande,['command','affichage si 0','affichage si 1',['func custom','option1','option2']],['command_button','option1 si info=1','option2 si info=0']]
+# format : ['texte',page si nav_ou_commande=True ,nav_ou_commande,['commande executer','affichage si 0','affichage si 1',['function custom','option1','option2']],['commande si button','option1 si info=1','option2 si info=0']]
 p0 = []
 p1 = []
 p2 = []
 p3 = []
 p4 = []
 page = []
+nav = []
 
 p0.append(['energie',1,True,['','','',['','','']],['','','']])
 p0.append(['gestion',2,True,['','','',['','','']],['','','']])
@@ -34,9 +35,12 @@ p4.append(['TEMP :',2,False,['mosquitto_sub -h 192.168.5.1 -t zigbee2mqtt/labo_t
 p4.append(['HUMI :',2,False,['mosquitto_sub -h 192.168.5.1 -t zigbee2mqtt/labo_temp -u zigbee -P jee4mqt2sub -C 1','','',['mqtt','humi','humidity']],['','','']])
 
 page.append(p0)
+nav.append("menu")
 page.append(p1)
+nav.append("menu/energie")
 page.append(p2)
+nav.append("menu/gestion")
 page.append(p3)
+nav.append("menu/resource")
 page.append(p4)
-
-nav = ["menu","menu/energie","menu/gestion","menu/resource","menu/temperature"]
+nav.append("menu/temperature")

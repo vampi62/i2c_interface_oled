@@ -6,37 +6,94 @@ script ecrit en python pour generer une interface via un écran oled et des bout
 
 les pages sont parametrer dans le fichier config_lcd.py, creer une page ou ajouter une section en suivant les instruction ci-dessous.
 
-1 - si vous voulez creer une nouvelle page ajouter une nouvelle table:
+Documentation pour l'édition du fichier config
 
-* __p..numero de page = []__
+Ajouter une nouvelle page
+Pour ajouter une nouvelle page, suivez ces étapes :
 
-* exemple : p5 = []
+Définissez une nouvelle liste vide pour la page, par exemple pX = [], où X est le numéro de la page.
 
-2 - ajouter un __page.append(p..numero de page)__  à la fin du script
+Ajoutez des composants à la nouvelle liste pX. Chaque composant est représenté par une liste avec le format suivant :
 
-3 - dans la table "nav" tout en bas du fichier config_lcd ajoutter un titre a cette page
+pX.append(['text à afficher', numéro_de_page, nav_ou_commande, [commande_à_exécuter, affichage_si_0, affichage_si_1, [fonction_personnalisée, option1, option2]], [commande_si_bouton, option1_si_info_1, option2_si_info_0]])
+text à afficher : Remplacez par le texte à afficher pour le composant.
+numéro_de_page : si nav_ou_commande est True, remplacez par le numéro de la page vers laquelle le composant doit rediriger. Sinon, mettre de 1 à 3 selon le type de composant.(1 = button, 2 = info, 3 = info+button)
+nav_ou_commande : Mettez True si le composant est un élément de navigation, False si c'est un bouton, un capteur ou un interrupteur.
+commande_à_exécuter : Remplacez par la commande à exécuter si le composant est une commande.
+affichage_si_0 : Remplacez par le texte à afficher lorsque la commande retourne 0.
+affichage_si_1 : Remplacez par le texte à afficher lorsque la commande retourne 1.
+fonction_personnalisée : Remplacez par la fonction personnalisée à exécuter si le composant en possède une. (ex: mqtt)
+option1 et option2 : Remplacez par les options pour la fonction personnalisée, le cas échéant.
 
-4 - ajouter des infos
+Une fois que la nouvelle page pX est définie avec tous ses composants, ajoutez-la à la liste page : page.append(pX).
+n'oublier pas d'ajouter le lien de navigation dans la liste nav : nav.append("menu/Yname") où Yname est le nom de la page.
 
-4.1 - le premier champs contient le nom qui sera afficher
 
-4.2 - valuer bool true si le champs permet d'aller sur une autre page
+Ajouter une redirection
+Une redirection est obtenue en créant un composant qui dirige vers une autre page lorsqu'il est cliqué. Pour ajouter une redirection :
 
-4.3.1 - si true le champs suivant comptient la page de destination
+Créez un nouveau composant avec le nom souhaité et définissez numéro_de_page comme le numéro de la page cible.
+Mettez nav_ou_commande à True.
+Laissez les champs commande_à_exécuter et les autres vides.
 
-4.3.2 - si false le champs suivant comptient le type de bouton - 1 = button, 2 = info, 3 = info+button
 
-4.4.1 - tableau dont le premier champs comptient la commande qui sera effectuer regulièrement par la page
 
-4.4.2 - le 2eme et 3eme champs contienne les texte afficher si le retour de la commande est compris entre 0 et 1
+Ajouter un bouton
+Pour ajouter un bouton :
 
-4.4.3 - le 4eme champs est une autre table qui doit être traité par une fonction custom que vous aurait integrer dans le code
+Créez un nouveau composant avec le nom souhaité.
+Mettez nav_ou_commande à False.
+Laissez les champs commande_à_exécuter et les autres vides.
+Définissez commande_si_bouton avec la commande à exécuter lorsque le bouton est cliqué.
 
-4.5.1 - tableau dont le premier champs comptient la commande qui sera effectuer à l'appuie du bouton (si selectionner)
 
-4.5.2 - le 2eme et 3eme champs contienne des parties qui seront ajouter à la commande en fonction du retour de la commande dans le champs 3 si le retour de la commande est compris entre 0 et 1 (si le bouton est sur le type 3)
 
-p..numero de page.append(['nom',bool false si navigation ,nav_ou_commande,['command','affichage si 0','affichage si 1',['func custom','option1','option2']],['command_button','option1 si info=1','option2 si info=0']])
+Ajouter un capteur
+Pour ajouter un capteur :
+
+Créez un nouveau composant avec le nom souhaité.
+Mettez nav_ou_commande à False.
+Définissez commande_à_exécuter avec la commande qui récupère les données du capteur.
+Laissez les autres champs vides car ils seront utilisés pour afficher les données du capteur.
+
+
+
+Ajouter un Interrupteur
+Pour ajouter un interrupteur avec une commande qui récupère une information, suivez ces étapes :
+
+Créez un nouveau composant avec le nom souhaité.
+Mettez nav_ou_commande à False.
+Définissez commande_à_exécuter avec la commande qui récupère l'information pour l'interrupteur (par exemple, l'état actuel de l'interrupteur).
+Laissez les autres champs vides, car ils seront utilisés pour afficher l'état de l'interrupteur.
+Définissez commande_si_bouton avec la commande à exécuter lorsque l'interrupteur est activé ou désactivé. Utilisez option1_si_info_1 pour l'action lorsque l'interrupteur est activé et option2_si_info_0 pour l'action lorsque l'interrupteur est désactivé.
+
+Exemple :
+Supposons que vous souhaitez ajouter un interrupteur pour contrôler une lampe. Voici comment procéder :
+Créez un nouveau composant pour l'interrupteur :
+
+['Lampe :', 3, False, ['mosquitto_sub -h 192.168.5.1 -t zigbee2mqtt/labo_lampe -u zigbee -P jee4mqt2sub -C 1', 'OFF', 'ON', ['mqtt', 'lampe', 'etat']], ['mosquitto_pub -h 192.168.5.1 -t zigbee2mqtt/labo_lampe/set -u zigbee -P jee4mqt2sub -m ', '{"etat": "OFF"}', '{"etat": "ON"}']]
+Le composant s'appelle "Lampe".
+Le numéro de page est 3, mais puisque nav_ou_commande est False, c'est le type de composant qui est détecté, donc 3 signifie que c'est un interrupteur.
+nav_ou_commande est False.
+La commande commande_à_exécuter est mosquitto_sub -h 192.168.5.1 -t zigbee2mqtt/labo_lampe -u zigbee -P jee4mqt2sub -C 1, qui récupère l'état actuel de la lampe via MQTT.
+L'affichage lorsque l'interrupteur est désactivé est "OFF" (affichage_si_0).
+L'affichage lorsque l'interrupteur est activé est "ON" (affichage_si_1).
+La commande à exécuter lorsque l'interrupteur est activé est mosquitto_pub -h 192.168.5.1 -t zigbee2mqtt/labo_lampe/set -u zigbee -P jee4mqt2sub -m {"etat": "ON"} (commande_si_bouton avec option1_si_info_1).
+La commande à exécuter lorsque l'interrupteur est désactivé est mosquitto_pub -h 192.168.5.1 -t zigbee2mqtt/labo_lampe/set -u zigbee -P jee4mqt2sub -m {"etat": "OFF"} (commande_si_bouton avec option2_si_info_0).
+Exemple :
+Supposons que vous souhaitiez ajouter une nouvelle page appelée 'paramètres'. Voici comment procéder :
+
+Définissez une nouvelle liste pour la page : p5 = []
+Ajoutez des composants à la nouvelle page :
+css
+Copy code
+p5.append(['Réglage 1 :', 2, False, ['commande', 'on', 'off', ['', '', '']], ['', '', '']])
+p5.append(['Réglage 2 :', 2, False, ['commande', 'actif', 'inactif', ['', '', '']], ['', '', '']])
+Ajoutez la nouvelle page à la liste page : page.append(p5)
+Ajoutez un nouveau lien de navigation à la liste nav : nav.append("menu/paramètres")
+N'oubliez pas de remplacer 'commande', 'Réglage 1', 'Réglage 2' et les autres espaces réservés par de véritables commandes et des noms appropriés pour vos nouveaux composants.
+
+p..numerodepage.append(['nom',bool false si navigation ,nav_ou_commande,['command','affichage si 0','affichage si 1',['func custom','option1','option2']],['command_button','option1 si info=1','option2 si info=0']])
 
 ## materiel
 
