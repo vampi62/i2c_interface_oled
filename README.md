@@ -2,9 +2,9 @@
 
 ## description
 
-script ecrit en python pour generer une interface via un écran oled et des boutons de navigation, pour un raspberry en n'utilisant que le port I2C.  
+interface via un écran oled et boutons de navigation, pour un raspberry en n'utilisant que le port I2C.  
 
-les pages sont parametrer dans le fichier config_lcd.py, creer une page ou ajouter une section en suivant les instruction ci-dessous.  
+les pages sont paramétrer dans le fichier config_lcd.py, creer une page ou ajouter une section en suivant les instruction ci-dessous.  
 
 Documentation pour l'édition du fichier config  
 
