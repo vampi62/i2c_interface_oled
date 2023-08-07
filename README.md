@@ -6,14 +6,31 @@ interface via un écran oled et boutons de navigation, pour un raspberry en n'ut
 
 les pages sont paramétrer dans le fichier config_lcd.py, creer une page ou ajouter une section en suivant les instruction ci-dessous.  
 
-Documentation pour l'édition du fichier config  
+## installation
 
-Ajouter une nouvelle page  
+cloner le projet dans le dossier /opt/  
+
+```bash
+cd /opt/
+git clone https://github.com/vampi62/i2c_interface_oled.git
+sudo chmod 755 -R /opt/i2c_interface_oled
+sudo chown root:root -R /opt/i2c_interface_oled
+```
+lancer le script d'installation
+```bash
+cd install
+sudo ./install_service.sh
+```
+un fichier uninstall_service.sh est disponible pour supprimer le service si vous le souhaitez.
+
+## Documentation pour l'édition du fichier config  
+
+### Ajouter une nouvelle page  
 Pour ajouter une nouvelle page, suivez ces étapes :  
 
 Définissez une nouvelle liste vide pour la page, par exemple pX = [], où X est le numéro de la page.  
 
-Ajoutez des composants à la nouvelle liste pX. Chaque composant est représenté par une liste avec le format suivant :  
+### Ajoutez des composants à la nouvelle liste pX. Chaque composant est représenté par une liste avec le format suivant :  
 
 pX.append(['text à afficher', numéro_de_page, nav_ou_commande, [commande_à_exécuter, affichage_si_0, affichage_si_1, [fonction_personnalisée, option1, option2]], [commande_si_bouton, option1_si_info_1, option2_si_info_0]])  
 text à afficher : Remplacez par le texte à afficher pour le composant.  
@@ -29,7 +46,7 @@ Une fois que la nouvelle page pX est définie avec tous ses composants, ajoutez-
 n'oublier pas d'ajouter le lien de navigation dans la liste nav : nav.append("menu/Yname") où Yname est le nom de la page.  
 
 
-Ajouter une redirection  
+### Ajouter une redirection  
 Une redirection est obtenue en créant un composant qui dirige vers une autre page lorsqu'il est cliqué. Pour ajouter une redirection :
 
 Créez un nouveau composant avec le nom souhaité et définissez numéro_de_page comme le numéro de la page cible.  
@@ -38,7 +55,7 @@ Laissez les champs commande_à_exécuter et les autres vides.
 
 
 
-Ajouter un bouton  
+### Ajouter un bouton  
 Pour ajouter un bouton :  
 
 Créez un nouveau composant avec le nom souhaité.  
@@ -48,7 +65,7 @@ Définissez commande_si_bouton avec la commande à exécuter lorsque le bouton e
 
 
 
-Ajouter un capteur  
+### Ajouter un capteur  
 Pour ajouter un capteur :  
 
 Créez un nouveau composant avec le nom souhaité.  
@@ -58,7 +75,7 @@ Laissez les autres champs vides car ils seront utilisés pour afficher les donn�
 
 
 
-Ajouter un Interrupteur  
+### Ajouter un Interrupteur  
 Pour ajouter un interrupteur avec une commande qui récupère une information, suivez ces étapes :  
 
 Créez un nouveau composant avec le nom souhaité.  

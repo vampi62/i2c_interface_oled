@@ -28,7 +28,7 @@ draw.text((x_display, top_display + offset_y_display[3]),  str("  0%"),  font=fo
 disp.image(image)
 disp.display()
 
-returncommand = subprocess.check_output('sudo dkms add .', cwd="/home/vampilab/rtl8192eu-linux-driver/", shell = True)
+returncommand = subprocess.check_output('sudo dkms add .', cwd="/home/vampilab/drivers/rtl8192eu-linux-driver/", shell = True)
 draw.rectangle((0,0,width,height), outline=0, fill=0)
 draw.text((x_display, top_display + offset_y_display[0]),  str(" - message - "),  font=font, fill=255)
 draw.text((x_display, top_display + offset_y_display[1]),  str("installation driver"),  font=font, fill=255)
@@ -36,7 +36,7 @@ draw.text((x_display, top_display + offset_y_display[3]),  str(" 50%"),  font=fo
 disp.image(image)
 disp.display()
 
-returncommand = subprocess.check_output('sudo dkms install rtl8192eu/1.0', cwd="/home/vampilab/rtl8192eu-linux-driver/", shell = True)
+returncommand = subprocess.check_output('sudo dkms install rtl8192eu/1.0', cwd="/home/vampilab/drivers/rtl8192eu-linux-driver/", shell = True)
 draw.rectangle((0,0,width,height), outline=0, fill=0)
 draw.text((x_display, top_display + offset_y_display[0]),  str(" - message - "),  font=font, fill=255)
 draw.text((x_display, top_display + offset_y_display[1]),  str("installation terminer"),  font=font, fill=255)

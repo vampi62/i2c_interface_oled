@@ -24,13 +24,25 @@ from config_lcd import page,nav
 
 ## ------ custom ------ ##
 
+def process_exec(command):
+    try:
+        returncommand = subprocess.check_output(command, shell = True, timeout = 2 )
+        if returncommand == b'':
+            returncommand = "N/A"
+        returncommand = returncommand.decode(encoding)
+    except:
+        returncommand = "N/A"
+    return returncommand
+    
+    
 def custom_index(active,position):
     if page[active][position][3][3][0] == 'mqtt':
         return mqtt(page[active][position][3][0],page[active][position][3][3][1],page[active][position][3][3][2])
 
 def mqtt(mqtt_command,mqtt_type,mqtt_recherche):
-    returncommand = subprocess.check_output(mqtt_command, shell = True )
-    returncommand = returncommand.decode(encoding)
+    returncommand = process_exec(mqtt_command)
+    if returncommand == "N/A":
+        return "N/A"
     off = returncommand.find(mqtt_recherche)
     if mqtt_type == "prise":
         if returncommand[off+11] == "O" and returncommand[off+12] == "N":
@@ -129,30 +141,28 @@ def action(active,position,typeact):
                 if not page[active][position][3][3][0] == '': # si custom function
                     returncommand = custom_index(active,position)
                 else:
-                    returncommand = subprocess.check_output(page[active][position][3][0], shell = True )
-                    returncommand = returncommand.decode(encoding)
+                    returncommand = process_exec(page[active][position][3][0])
                 returncommand = conversion_return(active,position,returncommand)
                 return page[active][position][0] + str(returncommand)
             elif page[active][position][1] == 3:
                 if not page[active][position][3][3][0] == '': # si custom function
                     returncommand = custom_index(active,position)
                 else:
-                    returncommand = subprocess.check_output(page[active][position][3][0], shell = True )
-                    returncommand = returncommand.decode(encoding)
+                    returncommand = process_exec(page[active][position][3][0])
                 returncommand = conversion_return(active,position,returncommand)
                 return page[active][position][0] + str(returncommand)
             else:
                 return page[active][position][0]
     else: ## buton
         if page[active][position][1] == 1:
-            returncommand = subprocess.check_output(page[active][position][4][0], shell = True )
+            returncommand = process_exec(page[active][position][4][0])
            # return page[active][position][0] + str(returncommand)
         if page[active][position][1] == 3:
             returncommand = action(active,position,False)
             if returncommand == page[active][position][0] + page[active][position][3][2]:
-                returncommand = subprocess.check_output(page[active][position][4][0] + page[active][position][4][1], shell = True )
+                returncommand = process_exec(page[active][position][4][0] + page[active][position][4][1])
             elif returncommand == page[active][position][0] + page[active][position][3][1]:
-                returncommand = subprocess.check_output(page[active][position][4][0] + page[active][position][4][2], shell = True )
+                returncommand = process_exec(page[active][position][4][0] + page[active][position][4][2])
             getcommand()
             printpage()
            # return page[active][position][0] + str(returncommand)
