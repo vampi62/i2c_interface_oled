@@ -8,6 +8,7 @@
 
 import smbus
 import time
+import json
 import subprocess
 import Adafruit_GPIO.SPI as SPI
 import Adafruit_SSD1306
@@ -43,28 +44,23 @@ def mqtt(mqtt_command,mqtt_type,mqtt_recherche):
     returncommand = process_exec(mqtt_command)
     if returncommand == "N/A":
         return "N/A"
-    off = returncommand.find(mqtt_recherche)
+    jsonout = json.loads(returncommand)
     if mqtt_type == "prise":
-        if returncommand[off+11] == "O" and returncommand[off+12] == "N":
+        if jsonout[mqtt_recherche] == "ON":
             return "1"
-        elif returncommand[off+11] == "O" and returncommand[off+12] == "F":
+        elif jsonout[mqtt_recherche] == "OFF":
             return "0"
         else:
             return "inconnue"
     elif mqtt_type == "temp" or mqtt_type == "humi":
-        if mqtt_type == "temp":
-            off += 13
-        elif mqtt_type == "humi":
-            off += 10
-        temp = ""
-        for a in range(15):
-            if returncommand[off+a] == ",":
-                break
-            temp += returncommand[off+a]
+        temp = jsonout[mqtt_recherche]
         if mqtt_type == "temp":
             temp += "°C"
         elif mqtt_type == "humi":
             temp += " %"
+        return temp
+    elif mqtt_type == "smok":
+        temp = jsonout[mqtt_recherche]
         return temp
 
 ## -- ne rien changer apres cette ligne, l'ajout de fonction doit se faire dans la section au dessus et l'ajout de page ou d'action dans le fichier config_lcd.py -- ##

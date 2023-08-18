@@ -33,6 +33,7 @@ p3.append(['DISK :',2,False,["df -h | grep 'root' | awk '{print $3 \"/\" $2 \" \
 
 p4.append(['TEMP :',2,False,['mosquitto_sub -h 192.168.5.1 -t zigbee2mqtt/labo_temp -u zigbee -P jee4mqt2sub -C 1','','',['mqtt','temp','temperature']],['','','']])
 p4.append(['HUMI :',2,False,['mosquitto_sub -h 192.168.5.1 -t zigbee2mqtt/labo_temp -u zigbee -P jee4mqt2sub -C 1','','',['mqtt','humi','humidity']],['','','']])
+p4.append(['FUME :',2,False,['mosquitto_sub -h 192.168.5.1 -t zigbee2mqtt/labo_fumer -u zigbee -P jee4mqt2sub -C 1','','',['mqtt','smok','smoke_density']],['','','']])
 
 page.append(p0)
 nav.append("menu")
