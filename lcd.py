@@ -19,51 +19,8 @@ from PIL import ImageFont
 #from multiprocessing import Process
 #import pyudev
 
-
 ## ------ config ------ ##
 from config_lcd import page,nav
-
-## ------ custom ------ ##
-
-def process_exec(command):
-    try:
-        returncommand = subprocess.check_output(command, shell = True, timeout = 2 )
-        if returncommand == b'':
-            returncommand = "N/A"
-        returncommand = returncommand.decode(encoding)
-    except:
-        returncommand = "N/A"
-    return returncommand
-    
-    
-def custom_index(active,position):
-    if page[active][position][3][3][0] == 'mqtt':
-        return mqtt(page[active][position][3][0],page[active][position][3][3][1],page[active][position][3][3][2])
-
-def mqtt(mqtt_command,mqtt_type,mqtt_recherche):
-    returncommand = process_exec(mqtt_command)
-    if returncommand == "N/A":
-        return "N/A"
-    jsonout = json.loads(returncommand)
-    if mqtt_type == "prise":
-        if jsonout[mqtt_recherche] == "ON":
-            return "1"
-        elif jsonout[mqtt_recherche] == "OFF":
-            return "0"
-        else:
-            return "inconnue"
-    elif mqtt_type == "temp" or mqtt_type == "humi":
-        temp = jsonout[mqtt_recherche]
-        if mqtt_type == "temp":
-            temp += "°C"
-        elif mqtt_type == "humi":
-            temp += " %"
-        return temp
-    elif mqtt_type == "smok":
-        temp = jsonout[mqtt_recherche]
-        return temp
-
-## -- ne rien changer apres cette ligne, l'ajout de fonction doit se faire dans la section au dessus et l'ajout de page ou d'action dans le fichier config_lcd.py -- ##
 
 ## ------ init var ------ ##
 encoding = 'utf-8'
@@ -77,7 +34,8 @@ offset_y_display = [0,9,17,25]
 anti_act = 0
 veillescreen = 0
 veille_tempo = 2000
-printmeno = []
+command_info_value = []
+command_info_txt = []
 tempo_actu_screen = 0
 custom_return = ''
 move = False
@@ -97,20 +55,26 @@ image = Image.new('1', (width, height))
 draw = ImageDraw.Draw(image)
 font = ImageFont.load_default()
 
-## ------ code generic ------ ## 
+def process_exec(command):
+    try:
+        returncommand = subprocess.check_output(command, shell = True, timeout = 2 )
+        if returncommand == b'':
+            returncommand = "N/A"
+        returncommand = returncommand.decode(encoding)
+    except:
+        returncommand = "N/A"
+    return returncommand
 
 ## gestion des pages
 def pagechange(sens,active,position):
     if sens:
-        if page[active][position][2]:
-            if page[active][position][4][0] != '':
-                action(active,position,True)
+        if page[active][position].get('actionCommande') != None:
+            action(active,position)
+        if page[active][position].get('destinationPage') != None:
             nav_histo.append([active,position])
-            return page[active][position][1],0
-        else:
-            action(active,position,True)
-            return active,position
-    else:
+            return page[active][position]['destinationPage'],0
+        return active,position
+    else: # retour
         if len(nav_histo) > 0:
             page_return = [nav_histo[len(nav_histo)-1][0],nav_histo[len(nav_histo)-1][1]]
             del nav_histo[len(nav_histo)-1]
@@ -118,54 +82,23 @@ def pagechange(sens,active,position):
         else:
             return active,position
 
-## convertie la sortie binaire d'une commande en texte pret definie
-def conversion_return(active,position,returncommand):
-    if page[active][position][3][1] != '' and page[active][position][3][1] != '':
-        if returncommand == "0":
-            return page[active][position][3][1]
-        elif returncommand == "1":
-            return page[active][position][3][2]
-    return returncommand
-
 ## execution command des boutons
-def action(active,position,typeact):
-    if not typeact: ## info
-        if page[active][position][2]:
-            return page[active][position][0]
-        else:
-            if page[active][position][1] == 2:
-                if not page[active][position][3][3][0] == '': # si custom function
-                    returncommand = custom_index(active,position)
-                else:
-                    returncommand = process_exec(page[active][position][3][0])
-                returncommand = conversion_return(active,position,returncommand)
-                return page[active][position][0] + str(returncommand)
-            elif page[active][position][1] == 3:
-                if not page[active][position][3][3][0] == '': # si custom function
-                    returncommand = custom_index(active,position)
-                else:
-                    returncommand = process_exec(page[active][position][3][0])
-                returncommand = conversion_return(active,position,returncommand)
-                return page[active][position][0] + str(returncommand)
-            else:
-                return page[active][position][0]
-    else: ## buton
-        if page[active][position][1] == 1:
-            returncommand = process_exec(page[active][position][4][0])
-           # return page[active][position][0] + str(returncommand)
-        if page[active][position][1] == 3:
-            returncommand = action(active,position,False)
-            if returncommand == page[active][position][0] + page[active][position][3][2]:
-                returncommand = process_exec(page[active][position][4][0] + page[active][position][4][1])
-            elif returncommand == page[active][position][0] + page[active][position][3][1]:
-                returncommand = process_exec(page[active][position][4][0] + page[active][position][4][2])
-            getcommand()
-            printpage()
-           # return page[active][position][0] + str(returncommand)
+def action(active,position):
+    if page[active][position]['actionCommande'].get('ifResult') != None:
+        for x in range(0, len(page[active][position]['actionCommande']['ifResult'])):
+            if page[active][position]['actionCommande']['ifResult'][x][0] == command_info_value[position] or x == len(page[active][position]['actionCommande']['ifResult'])-1:
+                process_exec(page[active][position]['actionCommande']['commande'] + page[active][position]['actionCommande']['ifResult'][x][1])
+                break
+    else:
+        process_exec(page[active][position]['actionCommande']['commande'])
+    getcommand()
+    printpage()
 
+## affichage de la page
 def printpage():
     global veillescreen
-    global printmeno
+    global command_info_value
+    global command_info_txt
     draw.rectangle((0,0,width,height), outline=0, fill=0)
     if veillescreen < veille_tempo:
         draw.text((x_display, top_display + offset_y_display[0]),  str(" " + nav[pageactive]),  font=font, fill=255)
@@ -176,24 +109,58 @@ def printpage():
                     selection_x = "*"
                 else:
                     selection_x = " "
-                draw.text((x_display, top_display + offset_y_display[x+1]),  selection_x + " " + printmeno[x+offset_select],  font=font, fill=255)
+                draw.text((x_display, top_display + offset_y_display[x+1]),  selection_x + " " + page[pageactive][x+offset_select]['txt'] + command_info_txt[x+offset_select],  font=font, fill=255)
     disp.image(image)
     disp.display()
 
+## offset selecteur
 def get_offset(x):
     if x > 2:
         return x-2
     else:
         return 0
 
-def getcommand():
-    global printmeno
-    printmeno = []
-    for x in range(0, len(page[pageactive])):
-        printmeno.append("")
-    for x in range(0, len(page[pageactive])):
-        printmeno[x] = action(pageactive,x,False)
 
+## recuperation des commandes info
+def getcommand():
+    global command_info_value
+    global command_info_txt
+    command_info_value = []
+    command_info_txt = []
+    for x in range(0, len(page[pageactive])):
+        command_info_value.append("")
+        command_info_txt.append("")
+    for x in range(0, len(page[pageactive])):
+        if page[pageactive][x].get('infoCommande') != None:
+            command_info_value[x] = process_exec(page[pageactive][x]['infoCommande']['commande'])
+            if command_info_value[x] == "N/A":
+                command_info_txt[x] = "N/A"
+                continue
+            if page[pageactive][x]['infoCommande'].get('type') != None:
+                if page[pageactive][x]['infoCommande']['type'] == "json":
+                    try:
+                        command_info_value[x] = json.loads(command_info_value[x])[page[pageactive][x]['infoCommande']['tag']]
+                    except:
+                        command_info_value[x] = "N/A - json"
+                        command_info_txt[x] = "N/A - json"
+                        continue
+            command_info_value[x] = str(command_info_value[x])
+            if page[pageactive][x]['infoCommande'].get('txtResultLiteral') != None:
+                valFound = False
+                for y in range(0, len(page[pageactive][x]['infoCommande']['txtResultLiteral'])):
+                    if page[pageactive][x]['infoCommande']['txtResultLiteral'][y][0] == command_info_value[x]:
+                        command_info_txt[x] = page[pageactive][x]['infoCommande']['txtResultLiteral'][y][1]
+                        valFound = True
+                        break
+                if not valFound:
+                    command_info_txt[x] = command_info_value[x]
+            else:
+                command_info_txt[x] = command_info_value[x]
+            if page[pageactive][x]['infoCommande'].get('suffixe') != None:
+                command_info_txt[x] += page[pageactive][x]['infoCommande'].get('suffixe')
+                
+
+## lecture des boutons
 def read_pin_pcf():
     global anti_act
     global move

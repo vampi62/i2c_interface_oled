@@ -32,84 +32,41 @@ Définissez une nouvelle liste vide pour la page, par exemple pX = [], où X est
 
 ### Ajoutez des composants à la nouvelle liste pX. Chaque composant est représenté par une liste avec le format suivant :  
 
-pX.append(['text à afficher', numéro_de_page, nav_ou_commande, [commande_à_exécuter, affichage_si_0, affichage_si_1, [fonction_personnalisée, option1, option2]], [commande_si_bouton, option1_si_info_1, option2_si_info_0]])  
-text à afficher : Remplacez par le texte à afficher pour le composant.  
-numéro_de_page : si nav_ou_commande est True, remplacez par le numéro de la page vers laquelle le composant doit rediriger. Sinon, mettre de 1 à 3 selon le type de composant.(1 = button, 2 = info, 3 = info+button)  
-nav_ou_commande : Mettez True si le composant est un élément de navigation, False si c'est un bouton, un capteur ou un interrupteur.  
-commande_à_exécuter : Remplacez par la commande à exécuter si le composant est une commande.  
-affichage_si_0 : Remplacez par le texte à afficher lorsque la commande retourne 0.  
-affichage_si_1 : Remplacez par le texte à afficher lorsque la commande retourne 1.  
-fonction_personnalisée : Remplacez par la fonction personnalisée à exécuter si le composant en possède une. (ex: mqtt)  
-option1 et option2 : Remplacez par les options pour la fonction personnalisée, le cas échéant.  
+pX.append({
+    'txt':'prise_1 :',
+    'destinationPage':1,
+    'infoCommande':{
+        'commande':'mosquitto_sub -h 192.168.5.1 -t zigbee2mqtt/labo_multiprise -u zigbee -P jee4mqt2sub -C 1',
+        'tag':'state_l1',
+        'type':'json',
+        'txtResultLiteral':[['1','ON'],['0','OFF']],
+        'suffixe':' °C'
+    },
+    'actionCommande':{
+        'commande':'mosquitto_pub -h 192.168.5.1 -t zigbee2mqtt/labo_multiprise/set -u zigbee -P jee4mqt2sub -m ',
+        'ifResult':[['OFF', '"{ \\"state_l1\\": \\"ON\\" }\"'],['ON', '"{ \\"state_l1\\": \\"OFF\\" }\"']]
+    }
+})
+
+seul le champ txt est obligatoire, les autres peuvent être laissés absents en fonction de votre besoin.
+
+- txt : le texte à afficher pour le composant.
+- destinationPage : le numéro de la page vers laquelle le composant doit naviguer lorsqu'il est cliqué.
+- infoCommande : la commande qui récupère les données du capteur.
+  - commande : la commande à exécuter pour récupérer les données du capteur.
+  - type : le type de données à traiter : 'json'
+  - tag : le tag à rechercher dans la sortie json de la commande.
+  - txtResultLiteral : une liste de listes qui contient les valeurs à afficher pour chaque résultat possible.
+    - par exemple, si la commande renvoie 0 ou 1, vous pouvez définir txtResultLiteral comme [['0', 'OFF'], ['1', 'ON']] pour afficher OFF lorsque la commande renvoie 0 et ON lorsque la commande renvoie 1.
+  - suffixe : le suffixe à ajouter à la valeur récupérée.
+- actionCommande : la commande à exécuter lorsque le composant est cliqué.
+  - commande : la commande à exécuter.
+  - ifResult : une liste de listes qui contient les valeurs à comparer avec le résultat de la commande infoCommande. Si le résultat de la commande infoCommande correspond à l'une des valeurs de la listeen position [0], alors la commande sera executé avec l'argument en position [1].
+    - par exemple, si la commande infoCommande renvoie 0 ou 1, vous pouvez définir ifResult comme [['0', '"{ \\"state_l1\\": \\"ON\\" }\"'], ['1', '"{ \\"state_l1\\": \\"OFF\\" }\"']] pour exécuter la commande avec l'argument "{ \\"state_l1\\": \\"ON\\" }" lorsque la commande infoCommande renvoie 0 et avec l'argument "{ \\"state_l1\\": \\"OFF\\" }" lorsque la commande infoCommande renvoie 1.
 
 Une fois que la nouvelle page pX est définie avec tous ses composants, ajoutez-la à la liste page : page.append(pX).  
 n'oublier pas d'ajouter le lien de navigation dans la liste nav : nav.append("menu/Yname") où Yname est le nom de la page.  
 
-
-### Ajouter une redirection  
-Une redirection est obtenue en créant un composant qui dirige vers une autre page lorsqu'il est cliqué. Pour ajouter une redirection :
-
-Créez un nouveau composant avec le nom souhaité et définissez numéro_de_page comme le numéro de la page cible.  
-Mettez nav_ou_commande à True.  
-Laissez les champs commande_à_exécuter et les autres vides.  
-
-
-
-### Ajouter un bouton  
-Pour ajouter un bouton :  
-
-Créez un nouveau composant avec le nom souhaité.  
-Mettez nav_ou_commande à False.  
-Laissez les champs commande_à_exécuter et les autres vides.  
-Définissez commande_si_bouton avec la commande à exécuter lorsque le bouton est cliqué.  
-
-
-
-### Ajouter un capteur  
-Pour ajouter un capteur :  
-
-Créez un nouveau composant avec le nom souhaité.  
-Mettez nav_ou_commande à False.  
-Définissez commande_à_exécuter avec la commande qui récupère les données du capteur.  
-Laissez les autres champs vides car ils seront utilisés pour afficher les données du capteur.  
-
-
-
-### Ajouter un Interrupteur  
-Pour ajouter un interrupteur avec une commande qui récupère une information, suivez ces étapes :  
-
-Créez un nouveau composant avec le nom souhaité.  
-Mettez nav_ou_commande à False.  
-Définissez commande_à_exécuter avec la commande qui récupère l'information pour l'interrupteur (par exemple, l'état actuel de l'interrupteur).  
-Laissez les autres champs vides, car ils seront utilisés pour afficher l'état de l'interrupteur.  
-Définissez commande_si_bouton avec la commande à exécuter lorsque l'interrupteur est activé ou désactivé. Utilisez option1_si_info_1 pour l'action lorsque l'interrupteur est activé et option2_si_info_0 pour l'action lorsque l'interrupteur est désactivé.  
-
-Exemple :  
-Supposons que vous souhaitez ajouter un interrupteur pour contrôler une lampe. Voici comment procéder :  
-Créez un nouveau composant pour l'interrupteur :  
-
-['Lampe :', 3, False, ['mosquitto_sub -h 192.168.5.1 -t zigbee2mqtt/labo_lampe -u zigbee -P jee4mqt2sub -C 1', 'OFF', 'ON', ['mqtt', 'lampe', 'etat']], ['mosquitto_pub -h 192.168.5.1 -t zigbee2mqtt/labo_lampe/set -u zigbee -P jee4mqt2sub -m ', '{"etat": "OFF"}', '{"etat": "ON"}']]  
-Le composant s'appelle "Lampe".  
-Le numéro de page est 3, mais puisque nav_ou_commande est False, c'est le type de composant qui est détecté, donc 3 signifie que c'est un interrupteur.  
-nav_ou_commande est False.  
-La commande commande_à_exécuter est mosquitto_sub -h 192.168.5.1 -t zigbee2mqtt/labo_lampe -u zigbee -P jee4mqt2sub -C 1, qui récupère l'état actuel de la lampe via MQTT.  
-L'affichage lorsque l'interrupteur est désactivé est "OFF" (affichage_si_0).  
-L'affichage lorsque l'interrupteur est activé est "ON" (affichage_si_1).  
-La commande à exécuter lorsque l'interrupteur est activé est mosquitto_pub -h 192.168.5.1 -t zigbee2mqtt/labo_lampe/set -u zigbee -P jee4mqt2sub -m {"etat": "ON"} (commande_si_bouton avec option1_si_info_1).  
-La commande à exécuter lorsque l'interrupteur est désactivé est mosquitto_pub -h 192.168.5.1 -t zigbee2mqtt/labo_lampe/set -u zigbee -P jee4mqt2sub -m {"etat": "OFF"} (commande_si_bouton avec option2_si_info_0).  
-Exemple :  
-Supposons que vous souhaitiez ajouter une nouvelle page appelée 'paramètres'. Voici comment procéder :  
-
-Définissez une nouvelle liste pour la page : p5 = []  
-Ajoutez des composants à la nouvelle page :  
-
-p5.append(['Réglage 1 :', 2, False, ['commande', 'on', 'off', ['', '', '']], ['', '', '']])  
-p5.append(['Réglage 2 :', 2, False, ['commande', 'actif', 'inactif', ['', '', '']], ['', '', '']])  
-Ajoutez la nouvelle page à la liste page : page.append(p5)  
-Ajoutez un nouveau lien de navigation à la liste nav : nav.append("menu/paramètres")  
-N'oubliez pas de remplacer 'commande', 'Réglage 1', 'Réglage 2' et les autres espaces réservés par de véritables commandes et des noms appropriés pour vos nouveaux composants.  
-
-p..numerodepage.append(['nom',bool false si navigation ,nav_ou_commande,['command','affichage si 0','affichage si 1',['func custom','option1','option2']],['command_button','option1 si info=1','option2 si info=0']])  
 
 
 ## materiel
