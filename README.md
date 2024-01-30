@@ -32,6 +32,7 @@ Définissez une nouvelle liste vide pour la page, par exemple pX = [], où X est
 
 ### Ajoutez des composants à la nouvelle liste pX. Chaque composant est représenté par une liste avec le format suivant :  
 
+```python
 pX.append({
     'txt':'prise_1 :',
     'destinationPage':1,
@@ -47,21 +48,21 @@ pX.append({
         'ifResult':[['OFF', '"{ \\"state_l1\\": \\"ON\\" }\"'],['ON', '"{ \\"state_l1\\": \\"OFF\\" }\"']]
     }
 })
-
-seul le champ txt est obligatoire, les autres peuvent être laissés absents en fonction de votre besoin.
+```
+seul le champ "txt" est obligatoire, les autres peuvent être laissés absents en fonction de votre besoin.
 
 - txt : le texte à afficher pour le composant.
 - destinationPage : le numéro de la page vers laquelle le composant doit naviguer lorsqu'il est cliqué.
 - infoCommande : la commande qui récupère les données du capteur.
-  - commande : la commande à exécuter pour récupérer les données du capteur.
-  - type : le type de données à traiter : 'json'
-  - tag : le tag à rechercher dans la sortie json de la commande.
-  - txtResultLiteral : une liste de listes qui contient les valeurs à afficher pour chaque résultat possible.
+  - commande : la commande à exécuter pour récupérer les données du capteur. (obligatoire pour infoCommande)
+  - type : le type de données à traiter ('json' seul type disponible pour le moment)
+  - tag : le tag à rechercher dans la sortie json de la commande. (champ obligatoire si type : json)
+  - txtResultLiteral : une liste de listes qui contient les valeurs à afficher pour chaque résultat possible. si non present ou aucun valeur ne corespond alors la valeur de retourner par la commande est afficher tel quel.
     - par exemple, si la commande renvoie 0 ou 1, vous pouvez définir txtResultLiteral comme [['0', 'OFF'], ['1', 'ON']] pour afficher OFF lorsque la commande renvoie 0 et ON lorsque la commande renvoie 1.
   - suffixe : le suffixe à ajouter à la valeur récupérée.
 - actionCommande : la commande à exécuter lorsque le composant est cliqué.
-  - commande : la commande à exécuter.
-  - ifResult : une liste de listes qui contient les valeurs à comparer avec le résultat de la commande infoCommande. Si le résultat de la commande infoCommande correspond à l'une des valeurs de la listeen position [0], alors la commande sera executé avec l'argument en position [1].
+  - commande : la commande à exécuter. (obligatoire pour actionCommande)
+  - ifResult : une liste de listes qui contient les valeurs à comparer avec le résultat de la commande infoCommande. Si le résultat de la commande infoCommande correspond à l'une des valeurs de la listeen position [0], alors la commande sera executé avec l'argument en position [1], si aucune valeur ne corespond alors le dernier paramètre dans la liste sera envoyer.
     - par exemple, si la commande infoCommande renvoie 0 ou 1, vous pouvez définir ifResult comme [['0', '"{ \\"state_l1\\": \\"ON\\" }\"'], ['1', '"{ \\"state_l1\\": \\"OFF\\" }\"']] pour exécuter la commande avec l'argument "{ \\"state_l1\\": \\"ON\\" }" lorsque la commande infoCommande renvoie 0 et avec l'argument "{ \\"state_l1\\": \\"OFF\\" }" lorsque la commande infoCommande renvoie 1.
 
 Une fois que la nouvelle page pX est définie avec tous ses composants, ajoutez-la à la liste page : page.append(pX).  
