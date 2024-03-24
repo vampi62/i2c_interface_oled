@@ -11,14 +11,13 @@ les pages sont paramétrer dans le fichier config_lcd.py, creer une page ou ajou
 cloner le projet dans le dossier /opt/  
 
 ```bash
-cd /opt/
+cd /opt
 git clone https://github.com/vampi62/i2c_interface_oled.git
 sudo chmod 755 -R /opt/i2c_interface_oled
 sudo chown root:root -R /opt/i2c_interface_oled
 ```
 lancer le script d'installation
 ```bash
-cd install
 sudo ./install_service.sh
 ```
 un fichier uninstall_service.sh est disponible pour supprimer le service si vous le souhaitez.

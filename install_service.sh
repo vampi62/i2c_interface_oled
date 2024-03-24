@@ -2,7 +2,6 @@
 
 # Chemin complet vers le fichier Python # repertoire du fichier bash
 repertoire_script=$(dirname "$(readlink -f "$0")")
-chemin_python="$repertoire_script/../lcd.py"
 
 # Créer le fichier de service
 service_file="/etc/systemd/system/i2cpythonlcd.service"
@@ -11,7 +10,8 @@ Description=ecran oled en i2c
 
 [Service]
 Type=simple
-ExecStart=python $chemin_python
+WorkingDirectory=$repertoire_script
+ExecStart=python lcd.py
 Restart=always
 User=root
 
