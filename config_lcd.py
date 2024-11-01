@@ -1,5 +1,3 @@
-# 1 = button, 2 = info, 3 = info+button
-# format : ['texte',page si nav_ou_commande=True ,nav_ou_commande,['commande executer','affichage si 0','affichage si 1',['function custom','option1','option2']],['commande si button','option1 si info=1','option2 si info=0']]
 p0 = []
 p1 = []
 p2 = []
@@ -19,11 +17,11 @@ p1.append({'txt':'prise_3 :','infoCommande':{'commande':'mosquitto_sub -h 192.16
 p1.append({'txt':'prise_4 :','infoCommande':{'commande':'mosquitto_sub -h 192.168.5.1 -t zigbee2mqtt/labo_multiprise -u zigbee -P jee4mqt2sub -C 1','tag':'state_l4','type':'json'},'actionCommande':{'commande':'mosquitto_pub -h 192.168.5.1 -t zigbee2mqtt/labo_multiprise/set -u zigbee -P jee4mqt2sub -m ','ifResult':[['OFF', '"{ \\"state_l4\\": \\"ON\\" }\"'],['ON', '"{ \\"state_l4\\": \\"OFF\\" }\"']]}})
 p1.append({'txt':'usb     :','infoCommande':{'commande':'mosquitto_sub -h 192.168.5.1 -t zigbee2mqtt/labo_multiprise -u zigbee -P jee4mqt2sub -C 1','tag':'state_l5','type':'json'},'actionCommande':{'commande':'mosquitto_pub -h 192.168.5.1 -t zigbee2mqtt/labo_multiprise/set -u zigbee -P jee4mqt2sub -m ','ifResult':[['OFF', '"{ \\"state_l5\\": \\"ON\\" }\"'],['ON', '"{ \\"state_l5\\": \\"OFF\\" }\"']]}})
 
-p2.append({'txt':'wifi driver','actionCommande':{'commande':'python restoredrive.py'}})
-p2.append({'txt':'fsck sd','actionCommande':{'commande':'python repare.py'}})
-p2.append({'txt':'ping gateway','actionCommande':{'commande':'python ping.py'}})
-p2.append({'txt':'redemarrage','actionCommande':{'commande':'python redemarrage.py'}})
-p2.append({'txt':'arret','actionCommande':{'commande':'python arret.py'}})
+p2.append({'txt':'wifi driver','actionCommande':{'customPage':'restoredrive'}})
+p2.append({'txt':'fsck sd','actionCommande':{'customPage':'repare'}})
+p2.append({'txt':'ping gateway','actionCommande':{'customPage':'ping'}})
+p2.append({'txt':'redemarrage','actionCommande':{'customPage':'redemarrage'}})
+p2.append({'txt':'arret','actionCommande':{'customPage':'arret'}})
 
 p3.append({'txt':'IP   :','infoCommande':{'commande':'hostname -I | cut -d\' \' -f1'}})
 p3.append({'txt':'TEMP :','infoCommande':{'commande':'vcgencmd measure_temp | cut -b 6-12'}})

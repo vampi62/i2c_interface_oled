@@ -1,13 +1,5 @@
 #!/usr/bin/env python3
-#sudo pip install pyudev
-#sudo pip install Adafruit_SSD1306
-#sudo pip install Adafruit_GPIO
-#sudo pip install smbus2
-#sudo pip install pi-ina219
-#sudo apt install mosquitto-clients
-
 import smbus
-import time
 import json
 import subprocess
 import Adafruit_GPIO.SPI as SPI
@@ -15,226 +7,251 @@ import Adafruit_SSD1306
 from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageFont
-#from ina219 import INA219,DeviceRangeError
-#from multiprocessing import Process
-#import pyudev
+import time
 
-## ------ config ------ ##
-from config_lcd import page,nav
+class lcd:
+    def __init__(self, pcf_address, lcd_address, offset_y_display:list, encoding:str) -> None:
+        self.bus=smbus.SMBus(1)
+        self.bus.write_byte(pcf_address, 0xff)
+        self.pcf_address = pcf_address
+        self.lcd = {}
+        self.lcd['address'] = lcd_address
+        self.lcd['display'] = Adafruit_SSD1306.SSD1306_128_32(rst=None)
+        self.lcd['width'] = self.lcd['display'].width
+        self.lcd['height'] = self.lcd['display'].height
+        self.lcd['display'].begin()
+        self.lcd['display'].clear()
+        self.lcd['display'].display()
+        self.lcd['image'] = Image.new('1', (self.lcd['width'], self.lcd['height']))
+        self.lcd['draw'] = ImageDraw.Draw(self.lcd['image'])
+        self.lcd['font'] = ImageFont.load_default()
+        self.lcd['offset_y_display'] = offset_y_display
+        self.lcd['start_x_display'] = 0
+        self.lcd['start_top_display'] = -2
+        self.active_page = 0
+        self.position = 0
+        self.command_info_value = []
+        self.command_info_txt = []
+        self.encoding = encoding
+        self.nav_histo = []
+        self.nav = []
+        self.page = []
+        self.in_sleep = False
+        self.key = 0
+        self.custom_page = {}
 
-## ------ init var ------ ##
-encoding = 'utf-8'
-RST = None
-PCF8574=0x20
-pageactive = 0
-position_x = 0
-top_display = -2
-x_display = 0
-offset_y_display = [0,9,17,25]
-anti_act = 0
-veillescreen = 0
-veille_tempo = 2000
-command_info_value = []
-command_info_txt = []
-tempo_actu_screen = 0
-custom_return = ''
-move = False
-nav_histo = []
-## ------ init lib ------ ##
+    ## exec custom page
+    def exec_custom(self,script:str) -> None:
+        if self.custom_page.get(script) == None:
+            return
+        is_running = True
+        custom_page = 0
+        next_custom_page = 0
+        while is_running:
+            if next_custom_page != 0:
+                custom_page = next_custom_page
+                next_custom_page = 0
+            if self.custom_page[script][custom_page] == None:
+                return
+            self.lcd['draw'].rectangle((0,0,self.lcd['width'],self.lcd['height']), outline=0, fill=0)
+            self.lcd['draw'].text((self.lcd['start_x_display'], self.lcd['start_top_display'] + self.lcd['offset_y_display'][0]),  str(" " + self.custom_page[script][custom_page]['nav']),  font=self.lcd['font'], fill=255)
+            if self.custom_page[script][custom_page].get('txt') != None:
+                for x in range(0, min(len(self.custom_page[script][custom_page]['txt']), 3)):
+                    self.lcd['draw'].text((self.lcd['start_x_display'], self.lcd['start_top_display'] + self.lcd['offset_y_display'][x+1]),  " " + self.custom_page[script][custom_page]['txt'][x],  font=self.lcd['font'], fill=255)
+            self.lcd['display'].image(self.lcd['image'])
+            self.lcd['display'].display()
+            if self.custom_page[script][custom_page].get('command') != None:
+                if self.custom_page[script][custom_page]['command'].get('cmd') != None:
+                    if self.custom_page[script][custom_page]['command'].get('cwd') != None:
+                        value = self.process_exec(self.custom_page[script][custom_page]['command']['cmd'],self.custom_page[script][custom_page]['command']['cwd'])
+                    else:
+                        value = self.process_exec(self.custom_page[script][custom_page]['command']['cmd'])
+                    if self.custom_page[script][custom_page]['command']["result"].get(value):
+                        next_custom_page = self.custom_page[script][custom_page]['command']["result"][value]
+            if self.custom_page[script][custom_page].get('wait') != None:
+                time.sleep(self.custom_page[script][custom_page]['wait'])
+            if self.custom_page[script][custom_page].get('goto') != None and next_custom_page == 0:
+                next_custom_page = self.custom_page[script][custom_page]['goto']
+            if self.custom_page[script][custom_page].get('exit') != None:
+                is_running = False
 
-disp = Adafruit_SSD1306.SSD1306_128_32(rst=RST)
-b=smbus.SMBus(1)
-b.write_byte(PCF8574, 0xff)
-
-disp.begin()
-disp.clear()
-disp.display()
-width = disp.width
-height = disp.height
-image = Image.new('1', (width, height))
-draw = ImageDraw.Draw(image)
-font = ImageFont.load_default()
-
-def process_exec(command):
-    try:
-        returncommand = subprocess.check_output(command, shell = True, timeout = 2 )
-        if returncommand == b'':
+    ## exec command
+    def process_exec(self,command:str,cwd:str=None) -> str:
+        try:
+            if cwd != None:
+                returncommand = subprocess.check_output(command, cwd=cwd, shell = True)
+            else:
+                returncommand = subprocess.check_output(command, shell = True, timeout = 2 )
+            if returncommand == b'':
+                returncommand = "N/A"
+            returncommand = str(returncommand.decode(self.encoding))
+        except:
             returncommand = "N/A"
-        returncommand = returncommand.decode(encoding)
-    except:
-        returncommand = "N/A"
-    return returncommand
+        return returncommand
 
-## gestion des pages
-def pagechange(sens,active,position):
-    if sens:
-        if page[active][position].get('actionCommande') != None:
-            action(active,position)
-        if page[active][position].get('destinationPage') != None:
-            nav_histo.append([active,position])
-            return page[active][position]['destinationPage'],0
-        return active,position
-    else: # retour
-        if len(nav_histo) > 0:
-            page_return = [nav_histo[len(nav_histo)-1][0],nav_histo[len(nav_histo)-1][1]]
-            del nav_histo[len(nav_histo)-1]
-            return page_return[0],page_return[1]
+    ## change page
+    def page_change(self,sens:bool):
+        if sens: # right button
+            if self.page[self.active_page][self.position].get('actionCommande') != None:
+                self.action()
+            if self.page[self.active_page][self.position].get('destinationPage') != None:
+                self.nav_histo.append([self.active_page,self.position])
+                tmp_page = self.active_page
+                self.active_page = self.page[tmp_page][self.position]['destinationPage']
+                if self.page[tmp_page][self.position].get('destinationPosition') != None:
+                    self.position = self.page[tmp_page][self.position]['destinationPosition']
+                else:
+                    self.position = 0
+        else: # left button
+            if len(self.nav_histo) > 0:
+                page_return = [self.nav_histo[len(self.nav_histo)-1][0],self.nav_histo[len(self.nav_histo)-1][1]]
+                del self.nav_histo[len(self.nav_histo)-1]
+                self.active_page = page_return[0]
+                self.position = page_return[1]
+        self.command_info_value = []
+        self.command_info_txt = []
+        for x in range(0, len(self.page[self.active_page])):
+            self.command_info_value.append("")
+            self.command_info_txt.append("")
+        self.get_command()
+
+    ## exec action command
+    def action(self) -> None:
+        if self.page[self.active_page][self.position]['actionCommande'].get('customPage'):
+            self.exec_custom(self.page[self.active_page][self.position]['actionCommande'].get('customPage'))
         else:
-            return active,position
+            if self.page[self.active_page][self.position]['actionCommande'].get('ifResult') != None:
+                for x in range(0, len(self.page[self.active_page][self.position]['actionCommande']['ifResult'])):
+                    if self.page[self.active_page][self.position]['actionCommande']['ifResult'][x][0] == self.command_info_value[self.position] or x == len(self.page[self.active_page][self.position]['actionCommande']['ifResult'])-1:
+                        self.process_exec(self.page[self.active_page][self.position]['actionCommande']['commande'] + self.page[self.active_page][self.position]['actionCommande']['ifResult'][x][1])
+                        break
+            else:
+                self.process_exec(self.page[self.active_page][self.position]['actionCommande']['commande'])
+        self.get_command()
+        self.print_page()
 
-## execution command des boutons
-def action(active,position):
-    if page[active][position]['actionCommande'].get('ifResult') != None:
-        for x in range(0, len(page[active][position]['actionCommande']['ifResult'])):
-            if page[active][position]['actionCommande']['ifResult'][x][0] == command_info_value[position] or x == len(page[active][position]['actionCommande']['ifResult'])-1:
-                process_exec(page[active][position]['actionCommande']['commande'] + page[active][position]['actionCommande']['ifResult'][x][1])
-                break
-    else:
-        process_exec(page[active][position]['actionCommande']['commande'])
-    getcommand()
-    printpage()
-
-## affichage de la page
-def printpage():
-    global veillescreen
-    global command_info_value
-    global command_info_txt
-    draw.rectangle((0,0,width,height), outline=0, fill=0)
-    if veillescreen < veille_tempo:
-        draw.text((x_display, top_display + offset_y_display[0]),  str(" " + nav[pageactive]),  font=font, fill=255)
-        offset_select = get_offset(position_x)
+    ## show page
+    def print_page(self) -> None:
+        if self.in_sleep:
+            return
+        self.lcd['draw'].rectangle((0,0,self.lcd['width'],self.lcd['height']), outline=0, fill=0)
+        self.lcd['draw'].text((self.lcd['start_x_display'], self.lcd['start_top_display'] + self.lcd['offset_y_display'][0]),  str(" " + self.nav[self.active_page]),  font=self.lcd['font'], fill=255)
+        offset_select = self.get_offset(self.position)
         for x in range(0, 3):
-            if x+offset_select < len(page[pageactive]):
-                if x+offset_select == position_x:
+            if x+offset_select < len(self.page[self.active_page]):
+                if x+offset_select == self.position:
                     selection_x = "*"
                 else:
                     selection_x = " "
-                draw.text((x_display, top_display + offset_y_display[x+1]),  selection_x + " " + page[pageactive][x+offset_select]['txt'] + command_info_txt[x+offset_select],  font=font, fill=255)
-    disp.image(image)
-    disp.display()
+                self.lcd['draw'].text((self.lcd['start_x_display'], self.lcd['start_top_display'] + self.lcd['offset_y_display'][x+1]),  selection_x + " " + self.page[self.active_page][x+offset_select]['txt'] + self.command_info_txt[x+offset_select],  font=self.lcd['font'], fill=255)
+        self.lcd['display'].image(self.lcd['image'])
+        self.lcd['display'].display()
 
-## offset selecteur
-def get_offset(x):
-    if x > 2:
-        return x-2
-    else:
-        return 0
-
-
-## recuperation des commandes info
-def getcommand():
-    global command_info_value
-    global command_info_txt
-    command_info_value = []
-    command_info_txt = []
-    for x in range(0, len(page[pageactive])):
-        command_info_value.append("")
-        command_info_txt.append("")
-    for x in range(0, len(page[pageactive])):
-        if page[pageactive][x].get('infoCommande') != None:
-            command_info_value[x] = process_exec(page[pageactive][x]['infoCommande']['commande'])
-            if command_info_value[x] == "N/A":
-                command_info_txt[x] = "N/A"
-                continue
-            if page[pageactive][x]['infoCommande'].get('type') != None:
-                if page[pageactive][x]['infoCommande']['type'] == "json":
-                    try:
-                        command_info_value[x] = json.loads(command_info_value[x])[page[pageactive][x]['infoCommande']['tag']]
-                    except:
-                        command_info_value[x] = "N/A - json"
-                        command_info_txt[x] = "N/A - json"
-                        continue
-            command_info_value[x] = str(command_info_value[x])
-            if page[pageactive][x]['infoCommande'].get('txtResultLiteral') != None:
-                valFound = False
-                for y in range(0, len(page[pageactive][x]['infoCommande']['txtResultLiteral'])):
-                    if page[pageactive][x]['infoCommande']['txtResultLiteral'][y][0] == command_info_value[x]:
-                        command_info_txt[x] = page[pageactive][x]['infoCommande']['txtResultLiteral'][y][1]
-                        valFound = True
-                        break
-                if not valFound:
-                    command_info_txt[x] = command_info_value[x]
-            else:
-                command_info_txt[x] = command_info_value[x]
-            if page[pageactive][x]['infoCommande'].get('suffixe') != None:
-                command_info_txt[x] += page[pageactive][x]['infoCommande'].get('suffixe')
-                
-
-## lecture des boutons
-def read_pin_pcf():
-    global anti_act
-    global move
-    global veillescreen
-    global tempo_actu_screen
-    global position_x
-    global pageactive
-    pins = b.read_byte(PCF8574)
-    if (pins & 0x08) == 0: # haut
-        if anti_act == 0:
-            anti_act = 10
-            if veillescreen < veille_tempo:
-                if position_x > 0:
-                    position_x -= 1
-            veillescreen = 0
-            move = True
-    else:
-        if anti_act == 10:
-            anti_act = 0
-    if (pins & 0x02) == 0: # droite
-        if anti_act == 0:
-            anti_act = 11
-            if veillescreen < veille_tempo:
-                pageactive,position_x = pagechange(True,pageactive,position_x)
-            veillescreen = 0
-            tempo_actu_screen = 0
-    else:
-        if anti_act == 11:
-            anti_act = 0
-    if (pins & 0x04) == 0: # gauche
-        if anti_act == 0:
-            anti_act = 12
-            if veillescreen < veille_tempo:
-                pageactive,position_x = pagechange(False,pageactive,position_x)
-            veillescreen = 0
-            tempo_actu_screen = 0
-    else:
-        if anti_act == 12:
-            anti_act = 0
-    if (pins & 0x01) == 0: # bas
-        if anti_act == 0:
-            anti_act = 13
-            if veillescreen < veille_tempo:
-                if position_x < len(page[pageactive])-1:
-                    position_x += 1
-            veillescreen = 0
-            move = True
-    else:
-        if anti_act == 13:
-            anti_act = 0
-    time.sleep(0.01)
-#    if (pins & 0x10) == 0:
-#    if (pins & 0x20) == 0:
-#    if (pins & 0x40) == 0:
-#    if (pins & 0x80) == 0:
-def run():
-    global anti_act
-    global move
-    global veillescreen
-    global tempo_actu_screen
-    while 1:
-        read_pin_pcf()
-        if tempo_actu_screen == 0:
-            getcommand()
-            printpage()
-            tempo_actu_screen +=1
-        elif tempo_actu_screen > 150:
-            tempo_actu_screen = 0
+    ## offset pointer
+    def get_offset(self,x:int) -> int:
+        if x > 2:
+            return x-2
         else:
-            tempo_actu_screen +=1
-            veillescreen += 1
-        if move:
-            printpage()
-            move = False
+            return 0
 
-if __name__ == '__main__':
-    run()
+    ## exec info command
+    def get_command(self) -> None:
+        if self.in_sleep:
+            return
+        for x in range(0, len(self.page[self.active_page])):
+            self.command_info_value.append("")
+            self.command_info_txt.append("")
+        for x in range(0, len(self.page[self.active_page])):
+            if self.page[self.active_page][x].get('infoCommande') != None:
+                self.command_info_value[x] = self.process_exec(self.page[self.active_page][x]['infoCommande']['commande'])
+                if self.command_info_value[x] == "N/A":
+                    self.command_info_txt[x] = "N/A"
+                    continue
+                if self.page[self.active_page][x]['infoCommande'].get('type') != None:
+                    if self.page[self.active_page][x]['infoCommande']['type'] == "json":
+                        try:
+                            self.command_info_value[x] = json.loads(self.command_info_value[x])[self.page[self.active_page][x]['infoCommande']['tag']]
+                        except:
+                            self.command_info_value[x] = "N/A - json"
+                            self.command_info_txt[x] = "N/A - json"
+                            continue
+                self.command_info_value[x] = str(self.command_info_value[x])
+                if self.page[self.active_page][x]['infoCommande'].get('txtResultLiteral') != None:
+                    valFound = False
+                    for y in range(0, len(self.page[self.active_page][x]['infoCommande']['txtResultLiteral'])):
+                        if self.page[self.active_page][x]['infoCommande']['txtResultLiteral'][y][0] == self.command_info_value[x]:
+                            self.command_info_txt[x] = self.page[self.active_page][x]['infoCommande']['txtResultLiteral'][y][1]
+                            valFound = True
+                            break
+                    if not valFound:
+                        self.command_info_txt[x] = self.command_info_value[x]
+                else:
+                    self.command_info_txt[x] = self.command_info_value[x]
+                if self.page[self.active_page][x]['infoCommande'].get('suffixe') != None:
+                    self.command_info_txt[x] += self.page[self.active_page][x]['infoCommande'].get('suffixe')
+
+    ## load page
+    def init_page(self,page:list,nav:list,custom_page:dict) -> None:
+        self.nav = nav
+        self.page = page
+        self.custom_page = custom_page
+        self.get_command()
+        self.print_page()
+
+    ## sleep screen
+    def sleep_screen(self) -> None:
+        self.in_sleep = True
+        self.lcd['display'].clear()
+        self.lcd['display'].display()
+
+    ## read button
+    def read_pin_pcf(self) -> None: # return True if a key is pressed
+        pins = self.bus.read_byte(self.pcf_address)
+        if (pins & 0x08) == 0: # top
+            if self.key == 1:
+                return
+            if self.in_sleep:
+                self.in_sleep = False
+                self.key = 1
+                return
+            if self.position > 0:
+                self.position -= 1
+            self.key = 1
+            return
+        if (pins & 0x02) == 0: # right
+            if self.key == 2:
+                return
+            if self.in_sleep:
+                self.in_sleep = False
+                self.key = 2
+                return
+            self.page_change(True)
+            self.key = 2
+            return
+        if (pins & 0x04) == 0: # left
+            if self.key == 3:
+                return
+            if self.in_sleep:
+                self.in_sleep = False
+                self.key = 3
+                return
+            self.page_change(False)
+            self.key = 3
+            return
+        if (pins & 0x01) == 0: # bottom
+            if self.key == 4:
+                return
+            if self.in_sleep:
+                self.in_sleep = False
+                self.key = 4
+                return
+            if self.position < len(self.page[self.active_page])-1:
+                self.position += 1
+            self.key = 4
+            return
+        self.key = 0
+        return
+    #    if (pins & 0x10) == 0:
+    #    if (pins & 0x20) == 0:
+    #    if (pins & 0x40) == 0:
+    #    if (pins & 0x80) == 0:
